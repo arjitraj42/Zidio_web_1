@@ -1,4 +1,5 @@
 import { PrismaClient, Role, Sentiment, FeedbackStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -17,31 +18,31 @@ async function main() {
   console.log(`✅ Workspace created: ${workspace.name} (ID: ${workspace.id})`);
 
   // --------------------------------------------------------------------------
-  // TODO 2: Create Demo Users (ADMIN, ANALYST, VIEWER)
+  // TODO 2: Create Demo Users (ADMIN, ANALYST, VIEWER) with real bcrypt hash
   // --------------------------------------------------------------------------
-  console.log('Creating demo users...');
-  // Dummy password hash placeholder (use bcrypt.hash in production)
-  const defaultPasswordHash = '$2b$10$EpRnTzVlqHNP0.fKbXWkDe1JqY.89x/N0p0g8q7r6s5t4u3v2w1x0';
+  console.log('Generating bcrypt password hash for demo users...');
+  const rawPassword = 'demo1234';
+  const passwordHash = await bcrypt.hash(rawPassword, 10);
 
   const usersData = [
     {
       name: 'Alex Rivera (Admin)',
       email: 'admin@acme.com',
-      passwordHash: defaultPasswordHash,
+      passwordHash: passwordHash,
       role: Role.ADMIN,
       workspaceId: workspace.id,
     },
     {
       name: 'Sarah Chen (Analyst)',
       email: 'analyst@acme.com',
-      passwordHash: defaultPasswordHash,
+      passwordHash: passwordHash,
       role: Role.ANALYST,
       workspaceId: workspace.id,
     },
     {
       name: 'Jordan Lee (Viewer)',
       email: 'viewer@acme.com',
-      passwordHash: defaultPasswordHash,
+      passwordHash: passwordHash,
       role: Role.VIEWER,
       workspaceId: workspace.id,
     },
@@ -97,7 +98,6 @@ async function main() {
   // --------------------------------------------------------------------------
   console.log('Seeding sample feedback items...');
 
-  // Sample feedback templates to demonstrate structure (expandable to 120+ items)
   const sampleFeedbackTemplates = [
     {
       content: 'The new analytics dashboard loads significantly faster than before. Great job on performance!',
@@ -153,19 +153,34 @@ async function main() {
             confidence: template.confidence,
           },
         },
-        embedding: {
-          create: {
-            // Sample dummy embedding vector (e.g. 8-dimensional representation sample)
-            vector: [0.012, -0.045, 0.128, 0.891, -0.210, 0.005, 0.443, -0.112],
-          },
-        },
       },
     });
 
-    console.log(`  - Seeded Feedback: ${feedback.id} (${feedback.channel})`);
+    // Seed 1536-dimensional vector embedding for pgvector
+    const dummyVectorArray = new Array(1536).fill(0).map(() => (Math.random() * 2 - 1).toFixed(6));
+    const vectorString = `[${dummyVectorArray.join(',')}]`;
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Embedding" ("id", "feedbackId", "vector", "createdAt") VALUES (gen_random_uuid()::text, $1, $2::vector, NOW())`,
+      feedback.id,
+      vectorString
+    );
+
+    console.log(`  - Seeded Feedback: ${feedback.id} (${feedback.channel}) with pgvector embedding`);
   }
 
-  console.log('🎉 Seeding completed successfully!');
+  console.log('\n===========================================================');
+  console.log('🎉 DEMO CREDENTIALS CREATED SUCCESSFULLY!');
+  console.log('===========================================================');
+  console.log(` Workspace Name : ${workspace.name}`);
+  console.log(` Workspace ID   : ${workspace.id}`);
+  console.log('-----------------------------------------------------------');
+  console.log(' Role       | Email             | Plaintext Password');
+  console.log('-----------------------------------------------------------');
+  console.log(' ADMIN      | admin@acme.com    | demo1234');
+  console.log(' ANALYST    | analyst@acme.com  | demo1234');
+  console.log(' VIEWER     | viewer@acme.com   | demo1234');
+  console.log('===========================================================\n');
 }
 
 main()

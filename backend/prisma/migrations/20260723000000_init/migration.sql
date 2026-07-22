@@ -1,3 +1,6 @@
+-- Enable pgvector extension for semantic vector similarity search
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -75,7 +78,7 @@ CREATE TABLE "FeedbackTheme" (
 CREATE TABLE "Embedding" (
     "id" TEXT NOT NULL,
     "feedbackId" TEXT NOT NULL,
-    "vector" DOUBLE PRECISION[],
+    "vector" vector(1536) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Embedding_pkey" PRIMARY KEY ("id")
