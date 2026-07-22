@@ -100,7 +100,7 @@ export default function HomePage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-2">PostgreSQL Database</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Configured with Prisma ORM client singleton in <code className="text-purple-300 bg-purple-950/60 px-1.5 py-0.5 rounded">src/lib/db.js</code> for seamless queries.
+              Configured with Prisma ORM client schema in <code className="text-purple-300 bg-purple-950/60 px-1.5 py-0.5 rounded">backend/prisma/schema.prisma</code>.
             </p>
           </div>
 
