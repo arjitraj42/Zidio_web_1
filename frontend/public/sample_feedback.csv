@@ -1,0 +1,11 @@
+content,channel,customer_label,created_at
+"Great app, love the new UI updates!","app_review","John Doe","2026-07-27T08:00:00Z"
+"We need support with setting up single sign-on for our team.","support_ticket","Acme Corp","2026-07-26T14:30:00Z"
+"This feedback is invalid because the channel is incorrect.","invalid_channel","Test Co",""
+"","nps_survey","Jane Smith","2026-07-25T10:00:00Z"
+"Shared some ideas about the new dashboard in the forum.","community_post","Developer Pete",""
+"Invalid date format here.","app_review","","bad-date-string"
+"Highly recommend this product! 10/10.","nps_survey","","2026-07-27T09:15:00Z"
+"Discussed pricing plans; they are interested in the enterprise tier.","sales_note","Globex Corp","2026-07-27T10:00:00Z"
+"","support_ticket","",""
+"Had a quick question about API rate limits.","support_ticket","TechStart","2026-07-27T05:00:00Z"
