@@ -47,6 +47,11 @@ export function tenantDb(workspaceId) {
       findFirst: (args = {}) => db.feedback.findFirst({ ...args, where: scopedWhere(workspaceId, args.where) }),
       count: (args = {}) => db.feedback.count({ ...args, where: scopedWhere(workspaceId, args.where) }),
       create: (args = {}) => db.feedback.create({ ...args, data: { ...args.data, workspaceId } }),
+      createMany: (args = {}) => db.feedback.createMany({
+        ...args,
+        data: (args.data || []).map((item) => ({ ...item, workspaceId })),
+      }),
+      deleteMany: (args = {}) => db.feedback.deleteMany({ ...args, where: scopedWhere(workspaceId, args.where) }),
     },
     theme: {
       findMany: (args = {}) => db.theme.findMany({ ...args, where: scopedWhere(workspaceId, args.where) }),
