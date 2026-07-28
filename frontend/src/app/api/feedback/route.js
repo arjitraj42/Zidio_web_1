@@ -27,42 +27,65 @@ export async function GET(req) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const takeParam = searchParams.get('take');
-    const skipParam = searchParams.get('skip');
+    const q = searchParams.get('q') || '';
+    const pageParam = searchParams.get('page');
+    const pageSizeParam = searchParams.get('pageSize') || searchParams.get('take');
 
-    // Sane defaults for pagination
-    let take = 20;
-    let skip = 0;
-
-    if (takeParam) {
-      const parsedTake = parseInt(takeParam, 10);
-      if (!isNaN(parsedTake) && parsedTake > 0) {
-        take = parsedTake;
+    // Parse and validate pagination params
+    let page = 1;
+    if (pageParam) {
+      const parsedPage = parseInt(pageParam, 10);
+      if (!isNaN(parsedPage) && parsedPage > 0) {
+        page = parsedPage;
       }
     }
 
-    if (skipParam) {
-      const parsedSkip = parseInt(skipParam, 10);
-      if (!isNaN(parsedSkip) && parsedSkip >= 0) {
-        skip = parsedSkip;
+    let pageSize = 20;
+    if (pageSizeParam) {
+      const parsedPageSize = parseInt(pageSizeParam, 10);
+      if (!isNaN(parsedPageSize) && parsedPageSize > 0) {
+        pageSize = Math.min(100, parsedPageSize); // Cap at 100 max
       }
     }
 
-    // Query database with strict workspace isolation (tenantDb helper)
-    const feedbackItems = await tenantDb(user.workspaceId).feedback.findMany({
-      orderBy: { createdAt: 'desc' },
-      take,
-      skip,
-    });
+    const skip = (page - 1) * pageSize;
 
-    const total = await tenantDb(user.workspaceId).feedback.count();
+    // Construct search filter query scoped to workspaceId
+    const whereClause = {
+      ...(q.trim() && {
+        content: {
+          contains: q.trim(),
+          mode: 'insensitive',
+        },
+      }),
+    };
+
+    // Query total count and items matching search & pagination within caller's workspace
+    const [total, feedbackItems] = await Promise.all([
+      tenantDb(user.workspaceId).feedback.count({ where: whereClause }),
+      tenantDb(user.workspaceId).feedback.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: pageSize,
+        skip,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize) || 1;
 
     return NextResponse.json({
-      feedback: feedbackItems,
+      items: feedbackItems,
+      feedback: feedbackItems, // Backwards compatibility for existing caller components
+      total,
+      page,
+      pageSize,
+      totalPages,
       pagination: {
         total,
-        take,
+        take: pageSize,
         skip,
+        page,
+        totalPages,
       },
     });
   } catch (err) {

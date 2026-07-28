@@ -81,6 +81,7 @@ model Feedback {
   embedding Embedding?
 
   @@index([workspaceId])
+  @@index([workspaceId, createdAt(sort: Desc)])
 }
 
 model Theme {
