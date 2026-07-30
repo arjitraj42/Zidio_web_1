@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser, requireRole } from '@/lib/auth';
 import { tenantDb } from '@/lib/tenant';
+import { feedbackFilterSchema, buildFeedbackWhereClause } from '@/lib/feedbackQuery';
 
-// Zod Schema for feedback validation
+// Zod Schema for feedback creation validation
 const createFeedbackSchema = z.object({
   content: z.string().trim().min(1, 'Feedback content is required and cannot be empty'),
   channel: z.enum(
@@ -15,7 +16,7 @@ const createFeedbackSchema = z.object({
 
 /**
  * GET /api/feedback
- * Lists feedback items for the logged-in user's workspace only.
+ * Lists feedback items for the logged-in user's workspace with support for multi-field filtering, search, and pagination.
  * Permitted roles: ADMIN, ANALYST, VIEWER.
  */
 export async function GET(req) {
@@ -27,44 +28,53 @@ export async function GET(req) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const q = searchParams.get('q') || '';
-    const pageParam = searchParams.get('page');
-    const pageSizeParam = searchParams.get('pageSize') || searchParams.get('take');
 
-    // Parse and validate pagination params
-    let page = 1;
-    if (pageParam) {
-      const parsedPage = parseInt(pageParam, 10);
-      if (!isNaN(parsedPage) && parsedPage > 0) {
-        page = parsedPage;
-      }
-    }
-
-    let pageSize = 20;
-    if (pageSizeParam) {
-      const parsedPageSize = parseInt(pageSizeParam, 10);
-      if (!isNaN(parsedPageSize) && parsedPageSize > 0) {
-        pageSize = Math.min(100, parsedPageSize); // Cap at 100 max
-      }
-    }
-
-    const skip = (page - 1) * pageSize;
-
-    // Construct search filter query scoped to workspaceId
-    const whereClause = {
-      ...(q.trim() && {
-        content: {
-          contains: q.trim(),
-          mode: 'insensitive',
-        },
-      }),
+    // Extract query params into raw object
+    const rawParams = {
+      q: searchParams.get('q') || undefined,
+      page: searchParams.get('page') || undefined,
+      pageSize: searchParams.get('pageSize') || searchParams.get('take') || undefined,
+      channel: searchParams.get('channel') || undefined,
+      sentiment: searchParams.get('sentiment') || undefined,
+      status: searchParams.get('status') || undefined,
+      themeId: searchParams.get('themeId') || undefined,
+      dateFrom: searchParams.get('dateFrom') || undefined,
+      dateTo: searchParams.get('dateTo') || undefined,
     };
 
-    // Query total count and items matching search & pagination within caller's workspace
+    // Strict validation with Zod
+    const parsed = feedbackFilterSchema.safeParse(rawParams);
+
+    if (!parsed.success) {
+      const errorMessage = parsed.error.issues.map((i) => i.message).join(', ');
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          code: 'VALIDATION_ERROR',
+          details: parsed.error.format(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { page, pageSize, ...filterValues } = parsed.data;
+    const skip = (page - 1) * pageSize;
+
+    // Construct Prisma query where clause cleanly
+    const whereClause = buildFeedbackWhereClause(filterValues);
+
+    // Query total count and items matching filters & pagination within caller's workspace
     const [total, feedbackItems] = await Promise.all([
       tenantDb(user.workspaceId).feedback.count({ where: whereClause }),
       tenantDb(user.workspaceId).feedback.findMany({
         where: whereClause,
+        include: {
+          themes: {
+            include: {
+              theme: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         take: pageSize,
         skip,
