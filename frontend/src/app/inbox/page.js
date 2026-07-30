@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Inbox,
@@ -22,9 +23,12 @@ import {
   Shield,
   Clock,
   Search,
-  X
+  X,
+  Filter,
+  RotateCcw,
 } from 'lucide-react';
 import { LogoutButton } from '@/components/LogoutButton';
+import { FilterBar } from '@/components/FilterBar';
 
 // Channel configurations for UI rendering (labels, icons, and styling colors)
 const channelsConfig = {
@@ -71,20 +75,50 @@ const statusConfig = {
   },
 };
 
-export default function InboxPage() {
+function InboxContent() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read initial query parameter states from URL
+  const initialQ = searchParams.get('q') || '';
+  const initialPage = parseInt(searchParams.get('page') || '1', 10);
+  const initialChannel = searchParams.get('channel') || '';
+  const initialSentiment = searchParams.get('sentiment') || '';
+  const initialStatus = searchParams.get('status') || '';
+  const initialThemeId = searchParams.get('themeId') || '';
+  const initialDateFrom = searchParams.get('dateFrom') || '';
+  const initialDateTo = searchParams.get('dateTo') || '';
+
   const [feedbackList, setFeedbackList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // Server-side Pagination & Search states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState(initialQ);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQ);
+  const [page, setPage] = useState(initialPage);
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Combined Multi-Field Filters state
+  const [filters, setFilters] = useState({
+    channel: initialChannel,
+    sentiment: initialSentiment,
+    status: initialStatus,
+    themeId: initialThemeId,
+    dateFrom: initialDateFrom,
+    dateTo: initialDateTo,
+  });
+
+  // Dynamic filter options state fetched from backend
+  const [filterOptions, setFilterOptions] = useState({
+    channels: [],
+    themes: [],
+  });
 
   // New feedback form states
   const [content, setContent] = useState('');
@@ -92,7 +126,7 @@ export default function InboxPage() {
   const [customerLabel, setCustomerLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Bulk upload states
+  // Bulk ingestion states
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
@@ -104,23 +138,74 @@ export default function InboxPage() {
   const currentUser = session?.user;
   const canCreate = currentUser?.role === 'ADMIN' || currentUser?.role === 'ANALYST';
 
-  // Debounce search query input (300ms)
+  // Helper to sync filter and pagination state to URL search parameters
+  const updateUrl = useCallback(
+    (newFilters, query, pageNum) => {
+      const params = new URLSearchParams();
+      if (pageNum > 1) params.set('page', pageNum.toString());
+      if (query) params.set('q', query);
+      if (newFilters.channel) params.set('channel', newFilters.channel);
+      if (newFilters.sentiment) params.set('sentiment', newFilters.sentiment);
+      if (newFilters.status) params.set('status', newFilters.status);
+      if (newFilters.themeId) params.set('themeId', newFilters.themeId);
+      if (newFilters.dateFrom) params.set('dateFrom', newFilters.dateFrom);
+      if (newFilters.dateTo) params.set('dateTo', newFilters.dateTo);
+
+      const queryString = params.toString();
+      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      router.replace(newUrl, { scroll: false });
+    },
+    [pathname, router]
+  );
+
+  // Fetch dynamic filter options on mount
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetch('/api/feedback/filter-options')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.channels || data.themes) {
+            setFilterOptions({
+              channels: data.channels || [],
+              themes: data.themes || [],
+            });
+          }
+        })
+        .catch((err) => console.error('Failed to load filter options:', err));
+    }
+  }, [status]);
+
+  // Debounce search query input (300ms) and reset page to 1
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-      setPage(1); // Reset to page 1 on new search term
+      if (searchQuery !== debouncedQuery) {
+        setDebouncedQuery(searchQuery);
+        setPage(1);
+        updateUrl(filters, searchQuery, 1);
+      }
     }, 300);
 
     return () => clearTimeout(handler);
-  }, [searchQuery]);
+  }, [searchQuery, debouncedQuery, filters, updateUrl]);
 
-  // Fetch Feedback Items with Search & Server-Side Pagination
+  // Fetch Feedback Items with Combined Filters, Search & Server-Side Pagination
   const fetchFeedback = useCallback(async () => {
     setLoading(true);
     setError('');
 
     try {
-      const url = `/api/feedback?page=${page}&pageSize=${pageSize}&q=${encodeURIComponent(debouncedQuery)}`;
+      const queryParams = new URLSearchParams();
+      queryParams.set('page', page.toString());
+      queryParams.set('pageSize', pageSize.toString());
+      if (debouncedQuery) queryParams.set('q', debouncedQuery);
+      if (filters.channel) queryParams.set('channel', filters.channel);
+      if (filters.sentiment) queryParams.set('sentiment', filters.sentiment);
+      if (filters.status) queryParams.set('status', filters.status);
+      if (filters.themeId) queryParams.set('themeId', filters.themeId);
+      if (filters.dateFrom) queryParams.set('dateFrom', filters.dateFrom);
+      if (filters.dateTo) queryParams.set('dateTo', filters.dateTo);
+
+      const url = `/api/feedback?${queryParams.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -139,13 +224,38 @@ export default function InboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, debouncedQuery]);
+  }, [page, pageSize, debouncedQuery, filters]);
 
   useEffect(() => {
     if (status === 'authenticated') {
       fetchFeedback();
     }
   }, [status, fetchFeedback]);
+
+  // Handle single filter parameter updates (resets pagination to page 1)
+  const handleFilterChange = (key, value) => {
+    const nextFilters = { ...filters, [key]: value };
+    setFilters(nextFilters);
+    setPage(1);
+    updateUrl(nextFilters, debouncedQuery, 1);
+  };
+
+  // Clear all filters, search query, and reset URL
+  const handleClearFilters = () => {
+    const emptyFilters = {
+      channel: '',
+      sentiment: '',
+      status: '',
+      themeId: '',
+      dateFrom: '',
+      dateTo: '',
+    };
+    setFilters(emptyFilters);
+    setSearchQuery('');
+    setDebouncedQuery('');
+    setPage(1);
+    updateUrl(emptyFilters, '', 1);
+  };
 
   // Handle Optimistic Inline Status Change
   const handleStatusChange = async (feedbackId, newStatus) => {
@@ -214,7 +324,7 @@ export default function InboxPage() {
       setContent('');
       setCustomerLabel('');
       setChannel('support_ticket');
-      setPage(1); // Reset to first page to see the new item
+      setPage(1); // Reset to first page
       fetchFeedback();
     } catch (err) {
       console.error(err);
@@ -259,7 +369,7 @@ export default function InboxPage() {
         setUploadFile(null);
         const fileInput = document.getElementById('csv-file-input');
         if (fileInput) fileInput.value = '';
-        setPage(1); // Reset to first page
+        setPage(1);
         fetchFeedback();
       } else if (data.failedCount > 0) {
         setError('All uploaded CSV rows failed validation. See details below.');
@@ -275,8 +385,8 @@ export default function InboxPage() {
   };
 
   // Handle Bulk Integration Feed Simulation
-  const handleSimulateChannel = async (channel) => {
-    setSimulating(channel);
+  const handleSimulateChannel = async (simChannel) => {
+    setSimulating(simChannel);
     setError('');
     setSuccessMsg('');
     setUploadResult(null);
@@ -285,7 +395,7 @@ export default function InboxPage() {
       const res = await fetch('/api/feedback/simulate-channel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel }),
+        body: JSON.stringify({ channel: simChannel }),
       });
 
       const data = await res.json();
@@ -300,10 +410,10 @@ export default function InboxPage() {
         support_ticket: 'Support Desk Tickets',
         sales_note: 'Sales Call Notes',
       };
-      const channelName = friendlyNames[channel] || channel;
+      const channelName = friendlyNames[simChannel] || simChannel;
 
       setSuccessMsg(`${data.count} new items successfully imported from simulated ${channelName}.`);
-      setPage(1); // Reset to first page
+      setPage(1);
       fetchFeedback();
     } catch (err) {
       console.error(err);
@@ -338,7 +448,7 @@ export default function InboxPage() {
 
       setSuccessMsg(`Successfully deleted ${data.count} feedback items.`);
       setSelectedFeedbackIds([]);
-      setPage(1); // Reset to page 1 after deletion
+      setPage(1);
       fetchFeedback();
     } catch (err) {
       console.error(err);
@@ -358,6 +468,15 @@ export default function InboxPage() {
       </div>
     );
   }
+
+  const hasActiveFiltersOrSearch =
+    Boolean(debouncedQuery) ||
+    Boolean(filters.channel) ||
+    Boolean(filters.sentiment) ||
+    Boolean(filters.status) ||
+    Boolean(filters.themeId) ||
+    Boolean(filters.dateFrom) ||
+    Boolean(filters.dateTo);
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
@@ -379,7 +498,7 @@ export default function InboxPage() {
                 </div>
                 <div>
                   <h1 className="text-base font-bold text-white leading-tight">Workspace Inbox</h1>
-                  <p className="text-[11px] text-gray-400">Stream feedback ingestion & status workflow</p>
+                  <p className="text-[11px] text-gray-400">Stream feedback ingestion & multi-field filter engine</p>
                 </div>
               </div>
             </div>
@@ -398,45 +517,62 @@ export default function InboxPage() {
                   </span>
                 </div>
               )}
+
               <LogoutButton />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Container Content */}
+      {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Banner Messages */}
+        {/* Error Notification Banner */}
         {error && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center space-x-3 text-rose-300 text-sm animate-shake">
-            <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
-            <span>{error}</span>
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+            <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-200">
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
 
+        {/* Success Notification Banner */}
         {successMsg && (
-          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center space-x-3 text-emerald-300 text-sm animate-fadeIn">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-            <span>{successMsg}</span>
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg('')} className="text-emerald-400 hover:text-emerald-200">
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
 
-        {/* 2-Column Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Left Column: Form Controls */}
+        {/* Workspace Layout Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Form & Ingestion Actions */}
           <div className="space-y-6">
-            {/* Single Feedback Form */}
+            {/* Single Entry Form Card */}
             <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                <Plus className="h-5 w-5 text-indigo-400" />
-                <span>Single Feedback Entry</span>
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white flex items-center space-x-2">
+                  <Plus className="h-5 w-5 text-indigo-400" />
+                  <span>Manual Ingestion</span>
+                </h2>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                  Single Item
+                </span>
+              </div>
 
               {canCreate ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">
-                      Touchpoint Channel *
+                      Channel *
                     </label>
                     <select
                       value={channel}
@@ -609,8 +745,17 @@ export default function InboxPage() {
             </div>
           </div>
 
-          {/* Right Column: List & Display */}
+          {/* Right Column: Interactive Filter Bar & Stream List */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Interactive Filter Bar Component */}
+            <FilterBar
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClearFilters={handleClearFilters}
+              availableChannels={filterOptions.channels}
+              availableThemes={filterOptions.themes}
+            />
+
             <div className="glass-card rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-6 border-b border-gray-800/80 flex flex-col space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -631,7 +776,12 @@ export default function InboxPage() {
                     />
                     {searchQuery && (
                       <button
-                        onClick={() => setSearchQuery('')}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setDebouncedQuery('');
+                          setPage(1);
+                          updateUrl(filters, '', 1);
+                        }}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
                       >
                         <X className="h-3.5 w-3.5" />
@@ -644,15 +794,15 @@ export default function InboxPage() {
                       <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer hover:text-gray-300 select-none">
                         <input
                           type="checkbox"
-                          checked={feedbackList.length > 0 && feedbackList.every(item => selectedFeedbackIds.includes(item.id))}
+                          checked={feedbackList.length > 0 && feedbackList.every((item) => selectedFeedbackIds.includes(item.id))}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              const allCurrentIds = feedbackList.map(item => item.id);
+                              const allCurrentIds = feedbackList.map((item) => item.id);
                               const newSelection = Array.from(new Set([...selectedFeedbackIds, ...allCurrentIds]));
                               setSelectedFeedbackIds(newSelection);
                             } else {
-                              const currentIds = feedbackList.map(item => item.id);
-                              setSelectedFeedbackIds(selectedFeedbackIds.filter(id => !currentIds.includes(id)));
+                              const currentIds = feedbackList.map((item) => item.id);
+                              setSelectedFeedbackIds(selectedFeedbackIds.filter((id) => !currentIds.includes(id)));
                             }
                           }}
                           className="h-3.5 w-3.5 rounded border-gray-800 bg-gray-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-950 accent-indigo-500 cursor-pointer"
@@ -672,7 +822,7 @@ export default function InboxPage() {
 
                 {/* Bulk Actions Banner */}
                 {canCreate && selectedFeedbackIds.length > 0 && (
-                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between text-xs animate-pulse">
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between text-xs">
                     <span className="text-indigo-300 font-semibold">
                       {selectedFeedbackIds.length} items selected
                     </span>
@@ -705,19 +855,37 @@ export default function InboxPage() {
                   <p className="text-sm">Fetching workspace feedback items...</p>
                 </div>
               ) : feedbackList.length === 0 ? (
-                <div className="py-24 px-6 text-center space-y-3">
-                  <Inbox className="h-12 w-12 mx-auto text-gray-600 mb-2" />
-                  <p className="text-gray-300 font-medium">
-                    {debouncedQuery ? `No feedback matches your search "${debouncedQuery}"` : 'No feedback yet in this workspace'}
-                  </p>
-                  <p className="text-gray-500 text-xs max-w-sm mx-auto">
-                    {debouncedQuery 
-                      ? 'Try adjusting your search terms or clear the filter input.' 
-                      : canCreate 
+                /* Distinct Empty States */
+                hasActiveFiltersOrSearch ? (
+                  <div className="py-20 px-6 text-center space-y-4">
+                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-400">
+                      <Filter className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-gray-200 font-bold text-base">No feedback matches your filters</h3>
+                      <p className="text-gray-400 text-xs max-w-md mx-auto mt-1 leading-relaxed">
+                        We couldn't find any feedback items matching the current combination of channel, sentiment, status, theme, date range, or search criteria.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleClearFilters}
+                      className="inline-flex items-center space-x-2 text-xs font-semibold text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2 rounded-xl transition-all border border-indigo-500/30"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Clear all filters</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-24 px-6 text-center space-y-3">
+                    <Inbox className="h-12 w-12 mx-auto text-gray-600 mb-2" />
+                    <p className="text-gray-300 font-medium">No feedback yet in this workspace</p>
+                    <p className="text-gray-500 text-xs max-w-sm mx-auto">
+                      {canCreate
                         ? 'Add your very first feedback item above to start analyzing tenant intelligence streams.'
                         : 'Ask a workspace Administrator or Analyst to ingest feedback items.'}
-                  </p>
-                </div>
+                    </p>
+                  </div>
+                )
               ) : (
                 <div className="divide-y divide-gray-800/60">
                   {feedbackList.map((item) => {
@@ -740,24 +908,46 @@ export default function InboxPage() {
                               if (e.target.checked) {
                                 setSelectedFeedbackIds([...selectedFeedbackIds, item.id]);
                               } else {
-                                setSelectedFeedbackIds(selectedFeedbackIds.filter(id => id !== item.id));
+                                setSelectedFeedbackIds(selectedFeedbackIds.filter((id) => id !== item.id));
                               }
                             }}
-                            className="mt-1 h-4 w-4 rounded border-gray-800 bg-gray-950 text-indigo-650 focus:ring-indigo-500 focus:ring-offset-gray-950 accent-indigo-500 cursor-pointer"
+                            className="mt-1 h-4 w-4 rounded border-gray-800 bg-gray-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-950 accent-indigo-500 cursor-pointer"
                           />
                         )}
-                        <div className="flex-1 space-y-4">
-                          {/* Header details: Channel, Customer & Status */}
+                        <div className="flex-1 space-y-3">
+                          {/* Header details: Channel, Customer, Sentiment, Date & Status */}
                           <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                            <div className="flex items-center space-x-3">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-semibold border ${channelInfo.color}`}>
                                 <ChannelIcon className="h-3.5 w-3.5 mr-1.5" />
                                 {channelInfo.label}
                               </span>
+
                               {item.customerLabel && (
                                 <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-800 text-gray-300 font-medium">
                                   <User className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
                                   {item.customerLabel}
+                                </span>
+                              )}
+
+                              {item.sentiment && (
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    item.sentiment === 'POS'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : item.sentiment === 'NEU'
+                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                  }`}
+                                >
+                                  {item.sentiment === 'POS'
+                                    ? 'Positive'
+                                    : item.sentiment === 'NEU'
+                                    ? 'Neutral'
+                                    : 'Negative'}
+                                  {item.sentimentScore !== null &&
+                                    item.sentimentScore !== undefined &&
+                                    ` (${item.sentimentScore > 0 ? '+' : ''}${item.sentimentScore})`}
                                 </span>
                               )}
                             </div>
@@ -773,7 +963,7 @@ export default function InboxPage() {
                                 })}
                               </span>
 
-                              {/* Inline Status Dropdown (ADMIN/ANALYST) or Static Badge (VIEWER) */}
+                              {/* Inline Status Selector */}
                               {canCreate ? (
                                 <select
                                   value={currentStatus}
@@ -799,6 +989,21 @@ export default function InboxPage() {
                           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">
                             {item.content}
                           </p>
+
+                          {/* Associated Themes Badges (if any) */}
+                          {item.themes && item.themes.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {item.themes.map(({ theme }) => (
+                                <span
+                                  key={theme.id}
+                                  className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700"
+                                  style={theme.color ? { borderColor: `${theme.color}40`, color: theme.color } : {}}
+                                >
+                                  #{theme.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -822,7 +1027,11 @@ export default function InboxPage() {
 
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        onClick={() => {
+                          const nextP = Math.max(1, page - 1);
+                          setPage(nextP);
+                          updateUrl(filters, debouncedQuery, nextP);
+                        }}
                         disabled={page === 1 || loading}
                         className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white disabled:opacity-50 transition-all flex items-center space-x-1"
                       >
@@ -830,7 +1039,11 @@ export default function InboxPage() {
                         <span>Prev</span>
                       </button>
                       <button
-                        onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                        onClick={() => {
+                          const nextP = Math.min(totalPages, page + 1);
+                          setPage(nextP);
+                          updateUrl(filters, debouncedQuery, nextP);
+                        }}
                         disabled={page >= totalPages || loading}
                         className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white disabled:opacity-50 transition-all flex items-center space-x-1"
                       >
@@ -846,5 +1059,22 @@ export default function InboxPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InboxPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-300">
+          <div className="flex items-center space-x-3">
+            <RefreshCw className="h-5 w-5 animate-spin text-indigo-400" />
+            <span>Loading Inbox...</span>
+          </div>
+        </div>
+      }
+    >
+      <InboxContent />
+    </Suspense>
   );
 }
