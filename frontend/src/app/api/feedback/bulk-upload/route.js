@@ -158,6 +158,26 @@ export async function POST(req) {
         data: validRows,
       });
       importedCount = dbResult.count;
+
+      // Retrieve IDs of newly created items for classification
+      const newItems = await tenantDb(user.workspaceId).feedback.findMany({
+        where: {
+          sentiment: null,
+        },
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+        take: importedCount,
+      });
+
+      // Classify new items with chunked concurrency limit (batch size: 5) to respect API rate limits
+      const { classifyAndSaveFeedback } = await import('@/lib/classifyAndSave');
+      const concurrencyLimit = 5;
+      for (let i = 0; i < newItems.length; i += concurrencyLimit) {
+        const batch = newItems.slice(i, i + concurrencyLimit);
+        await Promise.all(
+          batch.map((item) => classifyAndSaveFeedback(item.id, user.workspaceId))
+        );
+      }
     }
 
     return NextResponse.json({

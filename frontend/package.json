@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "prisma generate --schema=../backend/prisma/schema.prisma && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "backfill": "node scripts/backfill-classify.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@prisma/client": "^6.3.0",
     "bcryptjs": "^2.4.3",
     "lucide-react": "^0.475.0",

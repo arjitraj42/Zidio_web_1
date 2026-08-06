@@ -134,6 +134,7 @@ function InboxContent() {
   const [selectedFeedbackIds, setSelectedFeedbackIds] = useState([]);
   const [deletingFeedback, setDeletingFeedback] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [reclassifyingId, setReclassifyingId] = useState(null);
 
   const currentUser = session?.user;
   const canCreate = currentUser?.role === 'ADMIN' || currentUser?.role === 'ANALYST';
@@ -289,6 +290,47 @@ function InboxContent() {
       setError('Network error while updating feedback status.');
     } finally {
       setUpdatingStatusId(null);
+    }
+  };
+
+  // Handle Manual AI Re-classification
+  const handleReclassify = async (feedbackId) => {
+    if (!canCreate || reclassifyingId) return;
+
+    setReclassifyingId(feedbackId);
+    setError('');
+    setSuccessMsg('');
+
+    try {
+      const res = await fetch(`/api/feedback/${feedbackId}/reclassify`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to re-classify feedback item');
+      } else {
+        // In-place update of feedback row sentiment, score, and themes
+        setFeedbackList((prev) =>
+          prev.map((item) =>
+            item.id === feedbackId
+              ? {
+                  ...item,
+                  sentiment: data.feedback?.sentiment || item.sentiment,
+                  sentimentScore: data.feedback?.sentimentScore ?? item.sentimentScore,
+                  themes: data.feedback?.themes || item.themes,
+                }
+              : item
+          )
+        );
+        setSuccessMsg('Feedback re-classified successfully with Claude AI!');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Network error while re-classifying feedback item.');
+    } finally {
+      setReclassifyingId(null);
     }
   };
 
@@ -930,7 +972,7 @@ function InboxContent() {
                                 </span>
                               )}
 
-                              {item.sentiment && (
+                              {item.sentiment ? (
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                     item.sentiment === 'POS'
@@ -949,6 +991,10 @@ function InboxContent() {
                                     item.sentimentScore !== undefined &&
                                     ` (${item.sentimentScore > 0 ? '+' : ''}${item.sentimentScore})`}
                                 </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-800 text-amber-400/90 border border-amber-500/20">
+                                  Unclassified (Needs Review)
+                                </span>
                               )}
                             </div>
 
@@ -962,6 +1008,19 @@ function InboxContent() {
                                   minute: '2-digit',
                                 })}
                               </span>
+
+                              {/* Manual Re-classify Action Button */}
+                              {canCreate && (
+                                <button
+                                  onClick={() => handleReclassify(item.id)}
+                                  disabled={reclassifyingId === item.id}
+                                  title="Re-classify with Claude AI"
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 transition-colors disabled:opacity-50"
+                                >
+                                  <RefreshCw className={`h-3.5 w-3.5 ${reclassifyingId === item.id ? 'animate-spin text-indigo-400' : ''}`} />
+                                  <span>{reclassifyingId === item.id ? 'Classifying...' : 'Re-classify'}</span>
+                                </button>
+                              )}
 
                               {/* Inline Status Selector */}
                               {canCreate ? (

@@ -73,6 +73,26 @@ export async function POST(req) {
       data: feedbackItems,
     });
 
+    // Retrieve IDs of newly created items for classification
+    const newItems = await tenantDb(user.workspaceId).feedback.findMany({
+      where: {
+        sentiment: null,
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+      take: result.count,
+    });
+
+    // Classify simulated items with chunked concurrency limit (batch size: 5)
+    const { classifyAndSaveFeedback } = await import('@/lib/classifyAndSave');
+    const concurrencyLimit = 5;
+    for (let i = 0; i < newItems.length; i += concurrencyLimit) {
+      const batch = newItems.slice(i, i + concurrencyLimit);
+      await Promise.all(
+        batch.map((item) => classifyAndSaveFeedback(item.id, user.workspaceId))
+      );
+    }
+
     return NextResponse.json({
       message: `Successfully simulated import of ${result.count} items.`,
       channel,

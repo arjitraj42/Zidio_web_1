@@ -145,7 +145,23 @@ export async function POST(req) {
       },
     });
 
-    return NextResponse.json(newFeedback, { status: 201 });
+    // Synchronously classify feedback upon creation
+    const { classifyAndSaveFeedback } = await import('@/lib/classifyAndSave');
+    await classifyAndSaveFeedback(newFeedback.id, user.workspaceId);
+
+    // Re-fetch created feedback item with populated sentiment, score, and themes
+    const updatedFeedback = await tenantDb(user.workspaceId).feedback.findFirst({
+      where: { id: newFeedback.id },
+      include: {
+        themes: {
+          include: {
+            theme: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(updatedFeedback || newFeedback, { status: 201 });
   } catch (err) {
     console.error('Error creating feedback item:', err);
     return NextResponse.json(
