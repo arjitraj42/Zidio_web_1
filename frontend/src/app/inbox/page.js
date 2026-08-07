@@ -27,6 +27,8 @@ import {
   Filter,
   RotateCcw,
   Tag,
+  Sparkles,
+  FileText,
 } from 'lucide-react';
 import { LogoutButton } from '@/components/LogoutButton';
 import { FilterBar } from '@/components/FilterBar';
@@ -548,6 +550,22 @@ function InboxContent() {
 
             <div className="flex items-center space-x-4">
               <Link
+                href="/ask"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-xs border border-indigo-500/30 transition-all"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Ask LOOP</span>
+              </Link>
+
+              <Link
+                href="/reports"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 font-semibold text-xs border border-pink-500/30 transition-all"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Reports</span>
+              </Link>
+
+              <Link
                 href="/themes"
                 className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-all"
               >
@@ -584,7 +602,11 @@ function InboxContent() {
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
               <span>{error}</span>
             </div>
-            <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-200">
+            <button
+              onClick={() => setError('')}
+              className="text-rose-400 hover:text-rose-200"
+              aria-label="Dismiss error message"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -597,7 +619,11 @@ function InboxContent() {
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
               <span>{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg('')} className="text-emerald-400 hover:text-emerald-200">
+            <button
+              onClick={() => setSuccessMsg('')}
+              className="text-emerald-400 hover:text-emerald-200"
+              aria-label="Dismiss success message"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>

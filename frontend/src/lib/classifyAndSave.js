@@ -159,6 +159,14 @@ export async function classifyAndSaveFeedback(feedbackId, workspaceId) {
       }
     }
 
+    // 6. Automatically generate and persist vector embedding for Ask LOOP semantic retrieval
+    try {
+      const { upsertEmbedding } = await import('@/lib/embeddings');
+      await upsertEmbedding(feedbackId, feedback.content);
+    } catch (embedErr) {
+      console.warn(`Embedding generation warning for ${feedbackId}:`, embedErr);
+    }
+
     return {
       success: true,
       feedbackId,
