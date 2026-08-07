@@ -299,10 +299,20 @@ function DashboardContent() {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="text-2xl font-black text-white">
-                {loading ? '...' : summary.totalItems.toLocaleString()}
+              <div className="flex items-baseline justify-between">
+                <div className="text-2xl font-black text-white">
+                  {loading ? '...' : summary.totalItems.toLocaleString()}
+                </div>
+                {!loading && summary.percentClassified !== undefined && (
+                  <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                    <Sparkles className="h-2.5 w-2.5 text-purple-400" />
+                    <span>{summary.percentClassified}% AI Classified</span>
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-gray-500">Total customer items ingested</p>
+              <p className="text-[11px] text-gray-500">
+                {summary.classifiedTotal || 0} items processed with live AI
+              </p>
             </div>
           </div>
 

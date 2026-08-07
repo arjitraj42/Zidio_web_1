@@ -117,6 +117,7 @@ export async function GET(req) {
     });
 
     const classifiedTotal = posCount + neuCount + negCount;
+    const percentClassified = totalItems > 0 ? Math.round((classifiedTotal / totalItems) * 100) : 0;
     const percentNegative =
       classifiedTotal > 0 ? Math.round((negCount / classifiedTotal) * 100) : 0;
 
@@ -185,6 +186,7 @@ export async function GET(req) {
         newThisWeek,
         totalMembers,
         classifiedTotal,
+        percentClassified,
       },
       volumeOverTime,
       sentimentBreakdown,
