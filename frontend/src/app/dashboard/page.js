@@ -216,6 +216,14 @@ function DashboardContent() {
 
             <div className="flex items-center space-x-4">
               <Link
+                href="/themes"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-all"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                <span>Themes</span>
+              </Link>
+
+              <Link
                 href="/inbox"
                 className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-600/20"
               >
