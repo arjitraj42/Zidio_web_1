@@ -241,6 +241,14 @@ function DashboardContent() {
               </Link>
 
               <Link
+                href="/settings/members"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 font-semibold text-xs border border-cyan-500/30 transition-all"
+              >
+                <Users className="h-3.5 w-3.5" />
+                <span>Members</span>
+              </Link>
+
+              <Link
                 href="/inbox"
                 className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-600/20"
               >
@@ -357,9 +365,12 @@ function DashboardContent() {
           </div>
 
           {/* Card 4: Active Team Members */}
-          <div className="glass-card p-5 rounded-2xl border border-gray-800 space-y-3 relative overflow-hidden group">
+          <Link
+            href="/settings/members"
+            className="glass-card p-5 rounded-2xl border border-gray-800 space-y-3 relative overflow-hidden group hover:border-purple-500/50 transition-all cursor-pointer block"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-purple-300 transition-colors">
                 Team Members
               </span>
               <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 group-hover:scale-110 transition-transform">
@@ -370,9 +381,12 @@ function DashboardContent() {
               <div className="text-2xl font-black text-purple-300">
                 {loading ? '...' : summary.totalMembers}
               </div>
-              <p className="text-[11px] text-gray-500">Active workspace accounts</p>
+              <p className="text-[11px] text-gray-500 group-hover:text-gray-300 transition-colors flex items-center justify-between">
+                <span>Active workspace accounts</span>
+                <span className="text-purple-400 font-medium text-[10px]">Manage →</span>
+              </p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Charts Grid: Volume Over Time & Sentiment Breakdown */}
