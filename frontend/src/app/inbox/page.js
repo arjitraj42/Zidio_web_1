@@ -26,6 +26,7 @@ import {
   X,
   Filter,
   RotateCcw,
+  Tag,
 } from 'lucide-react';
 import { LogoutButton } from '@/components/LogoutButton';
 import { FilterBar } from '@/components/FilterBar';
@@ -546,6 +547,14 @@ function InboxContent() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Link
+                href="/themes"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-all"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                <span>Themes</span>
+              </Link>
+
               {currentUser && (
                 <div className="flex items-center space-x-3 px-3 py-1.5 rounded-xl bg-gray-900/80 border border-gray-800/80 text-xs">
                   <div className="flex items-center space-x-2">
