@@ -37,6 +37,7 @@ import {
   Frown,
   HelpCircle,
   ArrowLeft,
+  FileText,
 } from 'lucide-react';
 import { LogoutButton } from '@/components/LogoutButton';
 import { FilterBar } from '@/components/FilterBar';
@@ -221,6 +222,14 @@ function DashboardContent() {
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Ask LOOP</span>
+              </Link>
+
+              <Link
+                href="/reports"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 font-semibold text-xs border border-pink-500/30 transition-all"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Reports</span>
               </Link>
 
               <Link
