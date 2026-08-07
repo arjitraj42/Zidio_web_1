@@ -602,7 +602,11 @@ function InboxContent() {
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
               <span>{error}</span>
             </div>
-            <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-200">
+            <button
+              onClick={() => setError('')}
+              className="text-rose-400 hover:text-rose-200"
+              aria-label="Dismiss error message"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -615,7 +619,11 @@ function InboxContent() {
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
               <span>{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg('')} className="text-emerald-400 hover:text-emerald-200">
+            <button
+              onClick={() => setSuccessMsg('')}
+              className="text-emerald-400 hover:text-emerald-200"
+              aria-label="Dismiss success message"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
