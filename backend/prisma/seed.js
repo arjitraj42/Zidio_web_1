@@ -136,9 +136,9 @@ async function main() {
 
   // 2. Create Demo Users (ADMIN, ANALYST, VIEWER)
   console.log('Generating bcrypt password hashes for demo roles...');
-  const adminHash = await bcrypt.hash('DemoAdmin123!', 10);
-  const analystHash = await bcrypt.hash('DemoAnalyst123!', 10);
-  const viewerHash = await bcrypt.hash('DemoViewer123!', 10);
+  const adminHash = await bcrypt.hash('demo1234', 10);
+  const analystHash = await bcrypt.hash('demo1234', 10);
+  const viewerHash = await bcrypt.hash('demo1234', 10);
 
   const usersData = [
     {
