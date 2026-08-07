@@ -32,7 +32,37 @@ function stripMarkdownFences(rawText) {
 }
 
 /**
- * Generates an executive Voice-of-Customer report narrative using Claude AI grounded strictly in pre-computed stats.
+ * Calls Google Gemini API if GEMINI_API_KEY is configured
+ */
+async function callGeminiAPI(systemPrompt, userPrompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API Error (${response.status}): ${errorText}`);
+  }
+
+  const json = await response.json();
+  return json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+/**
+ * Generates an executive Voice-of-Customer report narrative using AI grounded strictly in pre-computed stats.
  * 
  * @param {object} stats - Pre-computed stats object from computeReportStats
  * @returns {Promise<{ executiveSummary: string, topThemesAnalysis: string, sentimentShiftCommentary: string, notableQuotes: Array<object>, recommendedActions: string[] }>}
@@ -77,19 +107,40 @@ ${JSON.stringify(stats, null, 2)}
 
 Generate the structured executive VoC report in raw JSON matching the schema.`;
 
-  const model = 'claude-sonnet-4-6';
-
   try {
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    let rawText = '';
 
-    const rawText = response.content?.[0]?.text || '';
+    if (process.env.GEMINI_API_KEY) {
+      rawText = await callGeminiAPI(systemPrompt, userPrompt);
+    } else if (process.env.ANTHROPIC_API_KEY) {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      rawText = response.content?.[0]?.text || '';
+    } else {
+      // Offline fallback report narrative
+      return {
+        executiveSummary: `During this ${stats.durationDays}-day period, a total of ${stats.totalFeedback.current} customer feedback items were ingested across your workspace channels (${stats.totalFeedback.percentChange >= 0 ? '+' : ''}${stats.totalFeedback.percentChange}% shift vs prior period).`,
+        topThemesAnalysis: `The top feedback themes driving conversation were: ${stats.topThemes.map((t) => `${t.name} (${t.count} items)`).join(', ')}.`,
+        sentimentShiftCommentary: `Positive feedback comprised ${stats.sentimentBreakdown.current.posPercent}% of total volume (${stats.sentimentBreakdown.shifts.posShift >= 0 ? '+' : ''}${stats.sentimentBreakdown.shifts.posShift}% shift), while negative feedback accounted for ${stats.sentimentBreakdown.current.negPercent}%.`,
+        notableQuotes: (stats.representativeQuotes || []).map((q) => ({
+          quote: q.content,
+          channel: q.channel,
+          sentiment: q.sentiment,
+          takeaway: `Representative customer voice from ${q.channel}.`,
+        })),
+        recommendedActions: [
+          `Address top driver theme "${stats.topThemes[0]?.name || 'User Experience'}" by reviewing low-confidence items.`,
+          'Monitor negative sentiment shifts in active channels.',
+          'Share notable customer verbatims with engineering and product teams.',
+        ],
+      };
+    }
+
     const cleanedText = stripMarkdownFences(rawText);
-
     const parsed = JSON.parse(cleanedText);
     const validated = reportNarrativeSchema.safeParse(parsed);
 
@@ -106,9 +157,8 @@ Generate the structured executive VoC report in raw JSON matching the schema.`;
       recommendedActions: Array.isArray(parsed.recommendedActions) ? parsed.recommendedActions : [],
     };
   } catch (err) {
-    console.error('Error generating report narrative with Claude:', err);
+    console.error('Error generating report narrative with AI:', err);
 
-    // Fallback narrative generation if Claude call fails or times out
     return {
       executiveSummary: `During this ${stats.durationDays}-day period, a total of ${stats.totalFeedback.current} customer feedback items were ingested across your workspace channels (${stats.totalFeedback.percentChange >= 0 ? '+' : ''}${stats.totalFeedback.percentChange}% shift vs prior period).`,
       topThemesAnalysis: `The top feedback themes driving conversation were: ${stats.topThemes.map((t) => `${t.name} (${t.count} items)`).join(', ')}.`,

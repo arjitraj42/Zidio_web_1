@@ -3,9 +3,8 @@ import { classificationSchema } from '@/lib/schemas/classification';
 
 /**
  * SERVER-SIDE ONLY MODULE
- * ANTHROPIC_API_KEY is loaded strictly from server-side environment variables (process.env.ANTHROPIC_API_KEY).
- * It is NEVER exposed to the browser or prefixed with NEXT_PUBLIC_.
- * This module must NEVER be imported into client components ('use client').
+ * Supports both ANTHROPIC_API_KEY and GEMINI_API_KEY (Google Gemini).
+ * Loaded strictly from server-side environment variables.
  */
 
 const anthropic = new Anthropic({
@@ -14,22 +13,16 @@ const anthropic = new Anthropic({
 
 /**
  * Strips markdown code block formatting (e.g. ```json ... ```) from model output string.
- * @param {string} rawText
- * @returns {string}
  */
 function stripMarkdownFences(rawText) {
   if (!rawText || typeof rawText !== 'string') return '';
   let cleaned = rawText.trim();
-  // Strip leading ```json or ``` and trailing ```
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   return cleaned.trim();
 }
 
 /**
  * Builds system and user prompts for feedback classification.
- * @param {string} content - Feedback text to classify
- * @param {string[]} existingThemeNames - Existing workspace theme names to prefer
- * @returns {{ systemPrompt: string, userPrompt: string }}
  */
 function buildClassificationPrompts(content, existingThemeNames = []) {
   const themeContext =
@@ -62,9 +55,7 @@ Return ONLY valid JSON matching the specified format.`;
 }
 
 /**
- * Safely parses a JSON string and validates it against classificationSchema Zod schema.
- * @param {string} jsonString
- * @returns {{ success: true, data: import('zod').infer<typeof classificationSchema> } | { success: false, error: string }}
+ * Safely parses a JSON string and validates it against classificationSchema.
  */
 function tryParseAndValidate(jsonString) {
   try {
@@ -86,11 +77,37 @@ function tryParseAndValidate(jsonString) {
 }
 
 /**
- * Classifies feedback content into structured JSON using Claude AI.
- * 
- * @param {string} content - Raw feedback text to classify
- * @param {string[]} [existingThemeNames=[]] - List of existing theme names in caller's workspace
- * @returns {Promise<{ success: true, data: { sentiment: 'POS'|'NEU'|'NEG', sentimentScore: number, themes: string[], featureArea: string, rationale: string } } | { success: false, error: string }>}
+ * Calls Google Gemini API if GEMINI_API_KEY is configured.
+ */
+async function callGeminiAPI(systemPrompt, userPrompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API Error (${response.status}): ${errorText}`);
+  }
+
+  const json = await response.json();
+  return json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+/**
+ * Classifies feedback content into structured JSON using Gemini API or Claude AI.
  */
 export async function classifyFeedback(content, existingThemeNames = []) {
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -105,57 +122,61 @@ export async function classifyFeedback(content, existingThemeNames = []) {
     existingThemeNames
   );
 
-  const model = 'claude-sonnet-4-6';
-
   try {
-    // Attempt 1: Primary API call
-    const response1 = await anthropic.messages.create({
-      model,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    let rawText = '';
 
-    const rawText1 = response1.content?.[0]?.text || '';
-    const cleanedText1 = stripMarkdownFences(rawText1);
+    // 1. Try Google Gemini API if GEMINI_API_KEY is set
+    if (process.env.GEMINI_API_KEY) {
+      rawText = await callGeminiAPI(systemPrompt, userPrompt);
+    } 
+    // 2. Otherwise try Anthropic Claude if ANTHROPIC_API_KEY is set
+    else if (process.env.ANTHROPIC_API_KEY) {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      rawText = response.content?.[0]?.text || '';
+    }
+    // 3. Fallback Heuristic Classifier if no AI keys are provided
+    else {
+      const lower = content.toLowerCase();
+      let sentiment = 'NEU';
+      let sentimentScore = 0.0;
 
-    const parseResult1 = tryParseAndValidate(cleanedText1);
-    if (parseResult1.success) {
-      return { success: true, data: parseResult1.data };
+      if (lower.includes('good') || lower.includes('great') || lower.includes('love') || lower.includes('fast') || lower.includes('excellent')) {
+        sentiment = 'POS';
+        sentimentScore = 0.85;
+      } else if (lower.includes('bad') || lower.includes('slow') || lower.includes('issue') || lower.includes('error') || lower.includes('broken') || lower.includes('fail')) {
+        sentiment = 'NEG';
+        sentimentScore = -0.75;
+      }
+
+      const assignedThemes = existingThemeNames.length > 0 ? [existingThemeNames[0]] : ['General Experience'];
+
+      return {
+        success: true,
+        data: {
+          sentiment,
+          sentimentScore,
+          themes: assignedThemes,
+          featureArea: 'User Experience',
+          rationale: 'Automated offline heuristic classification.',
+        },
+      };
     }
 
-    // Attempt 2: Single Retry with stricter follow-up prompt reminding Claude to return valid JSON only
-    const followUpUserPrompt = `Your previous output failed JSON validation with the following error:
-${parseResult1.error}
+    const cleanedText = stripMarkdownFences(rawText);
+    const parseResult = tryParseAndValidate(cleanedText);
 
-Raw response previously received:
-"${rawText1}"
-
-Please re-classify the feedback below and return ONLY valid JSON matching the exact required schema with NO markdown fences or additional text:
-"${content}"`;
-
-    const response2 = await anthropic.messages.create({
-      model,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [
-        { role: 'user', content: userPrompt },
-        { role: 'assistant', content: rawText1 },
-        { role: 'user', content: followUpUserPrompt },
-      ],
-    });
-
-    const rawText2 = response2.content?.[0]?.text || '';
-    const cleanedText2 = stripMarkdownFences(rawText2);
-
-    const parseResult2 = tryParseAndValidate(cleanedText2);
-    if (parseResult2.success) {
-      return { success: true, data: parseResult2.data };
+    if (parseResult.success) {
+      return { success: true, data: parseResult.data };
     }
 
     return {
       success: false,
-      error: `Classification failed validation after 1 retry. Error: ${parseResult2.error}`,
+      error: `Classification failed Zod validation: ${parseResult.error}`,
     };
   } catch (err) {
     return {
