@@ -342,6 +342,13 @@ function ThemesContent() {
               >
                 Inbox
               </Link>
+              <Link
+                href="/ask"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-600/20"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Ask LOOP</span>
+              </Link>
 
               {isAdmin && (
                 <button

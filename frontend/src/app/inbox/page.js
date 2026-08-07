@@ -27,6 +27,7 @@ import {
   Filter,
   RotateCcw,
   Tag,
+  Sparkles,
 } from 'lucide-react';
 import { LogoutButton } from '@/components/LogoutButton';
 import { FilterBar } from '@/components/FilterBar';
@@ -547,6 +548,14 @@ function InboxContent() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Link
+                href="/ask"
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-xs border border-indigo-500/30 transition-all"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Ask LOOP</span>
+              </Link>
+
               <Link
                 href="/themes"
                 className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-all"
