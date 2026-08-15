@@ -28,7 +28,7 @@ export const authOptions = {
 
         // Fetch user from Postgres along with Workspace
         const user = await db.user.findUnique({
-          where: { email: email.toLowerCase() },
+          where: { email: email.toLowerCase().trim() },
           include: { workspace: true },
         });
 

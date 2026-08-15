@@ -12,7 +12,7 @@ Project LOOP is an enterprise-grade AI-powered Voice-of-Customer (VoC) platform.
 - **Language**: JavaScript (Plain JS)
 - **Database & ORM**: PostgreSQL & Prisma ORM (with pgvector support)
 - **Authentication**: NextAuth.js (Auth.js) with JWT session strategy & RBAC (`ADMIN`, `ANALYST`, `VIEWER`)
-- **AI & Grounded RAG**: Anthropic Claude API (`claude-sonnet-4-6`) & OpenAI `text-embedding-3-small` (1536-dim vector embeddings)
+- **AI & Grounded RAG**: GEMNI API & OpenAI `text-embedding-3-small` (1536-dim vector embeddings)
 - **Styling**: Tailwind CSS & Lucide Icons
 - **Data Visualization**: Recharts (Volume trends & sentiment distribution)
 - **Validation**: Zod schema validation
