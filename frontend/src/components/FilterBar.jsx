@@ -108,9 +108,9 @@ export function FilterBar({
       </div>
 
       {/* Filter Options Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 pt-3">
         {/* Channel Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Channel</label>
           <button
             type="button"
@@ -153,7 +153,7 @@ export function FilterBar({
         </div>
 
         {/* Sentiment Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Sentiment</label>
           <button
             type="button"
@@ -200,7 +200,7 @@ export function FilterBar({
         </div>
 
         {/* Status Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Status</label>
           <button
             type="button"
@@ -245,7 +245,7 @@ export function FilterBar({
         </div>
 
         {/* Theme Single-Select Dropdown */}
-        <div>
+        <div className="sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Theme</label>
           <select
             value={selectedThemeId}
@@ -268,21 +268,21 @@ export function FilterBar({
         </div>
 
         {/* Date Range Picker (From - To) */}
-        <div>
+        <div className="sm:col-span-2 lg:col-span-4">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Date Range</label>
           <div className="grid grid-cols-2 gap-1.5">
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => onFilterChange('dateFrom', e.target.value)}
-              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-[11px] px-2 py-1.5 rounded-xl focus:border-indigo-500/50 outline-none"
+              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-xs px-3 py-2 rounded-xl focus:border-indigo-500/50 outline-none w-full"
               title="From Date"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => onFilterChange('dateTo', e.target.value)}
-              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-[11px] px-2 py-1.5 rounded-xl focus:border-indigo-500/50 outline-none"
+              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-xs px-3 py-2 rounded-xl focus:border-indigo-500/50 outline-none w-full"
               title="To Date"
             />
           </div>

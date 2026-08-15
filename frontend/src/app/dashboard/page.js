@@ -24,6 +24,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Users,
+  UserPlus,
   Inbox,
   ArrowRight,
   RefreshCw,
@@ -273,8 +274,8 @@ function DashboardContent() {
                 href="/settings/members"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 font-semibold text-xs border border-cyan-500/30 transition-all hover:scale-[1.02]"
               >
-                <Users className="h-3.5 w-3.5" />
-                <span>Members</span>
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Add Member</span>
               </Link>
 
               <Link
