@@ -16,7 +16,7 @@ export async function GET(req, { params }) {
   if (rbacError) return rbacError;
 
   try {
-    const { id: themeId } = params;
+    const { id: themeId } = await params;
     const workspaceId = user.workspaceId;
 
     // 1. Verify theme exists AND belongs to caller's workspace (don't leak existence of cross-tenant themes)

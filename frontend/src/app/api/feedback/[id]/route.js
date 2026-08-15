@@ -22,7 +22,7 @@ export async function PATCH(req, { params }) {
   const rbacError = requireRole(user, ['ADMIN', 'ANALYST']);
   if (rbacError) return rbacError;
 
-  const { id } = params;
+  const { id } = await params;
 
   if (!id) {
     return NextResponse.json(
