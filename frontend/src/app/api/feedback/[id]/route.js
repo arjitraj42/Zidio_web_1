@@ -3,22 +3,21 @@ import { z } from 'zod';
 import { getSessionUser, requireRole } from '@/lib/auth';
 import { tenantDb } from '@/lib/tenant';
 
-// Schema validation for updating feedback status
-const updateStatusSchema = z.object({
-  status: z.enum(['NEW', 'REVIEWED', 'ACTIONED'], {
-    errorMap: () => ({ message: 'Status must be one of NEW, REVIEWED, or ACTIONED' }),
-  }),
+// Schema validation for updating feedback status & sentiment
+const updateFeedbackSchema = z.object({
+  status: z.enum(['NEW', 'REVIEWED', 'ACTIONED']).optional(),
+  sentiment: z.enum(['POS', 'NEU', 'NEG']).nullable().optional(),
 });
 
 /**
  * PATCH /api/feedback/[id]
- * Updates a feedback item's status (NEW | REVIEWED | ACTIONED).
+ * Updates a feedback item's status and/or sentiment.
  * Permitted roles: ADMIN, ANALYST. VIEWER gets 403 Forbidden.
  */
 export async function PATCH(req, { params }) {
   const user = await getSessionUser();
 
-  // RBAC Enforcement: Only ADMIN & ANALYST can update feedback status
+  // RBAC Enforcement: Only ADMIN & ANALYST can update feedback
   const rbacError = requireRole(user, ['ADMIN', 'ANALYST']);
   if (rbacError) return rbacError;
 
@@ -33,7 +32,7 @@ export async function PATCH(req, { params }) {
 
   try {
     const body = await req.json();
-    const parsed = updateStatusSchema.safeParse(body);
+    const parsed = updateFeedbackSchema.safeParse(body);
 
     if (!parsed.success) {
       const errorMessage = parsed.error.issues.map((i) => i.message).join(', ');
@@ -43,7 +42,7 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    const { status } = parsed.data;
+    const { status, sentiment } = parsed.data;
 
     // Verify existing item belongs to caller's workspace (Cross-Tenant Security Check)
     const existingItem = await tenantDb(user.workspaceId).feedback.findFirst({
@@ -57,10 +56,16 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    // Update status in PostgreSQL DB scoped by workspaceId
+    // Update status and/or sentiment in PostgreSQL DB scoped by workspaceId
     const updatedFeedback = await tenantDb(user.workspaceId).feedback.update({
       where: { id },
-      data: { status },
+      data: {
+        ...(status !== undefined && { status }),
+        ...(sentiment !== undefined && {
+          sentiment,
+          sentimentScore: sentiment === 'POS' ? 0.85 : sentiment === 'NEG' ? -0.75 : 0.0,
+        }),
+      },
     });
 
     return NextResponse.json(updatedFeedback);
