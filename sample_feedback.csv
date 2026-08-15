@@ -1,0 +1,11 @@
+content,channel,customer_label,created_at
+The application crashes whenever I try to export reports to PDF.,support_ticket,Acme Corp,2026-08-10
+Highly intuitive dashboard! We got our whole sales team onboarded in under 10 minutes.,app_review,Apex Systems,2026-08-11
+Searching through customer feedback is fast and responsive.,nps_survey,Starlight FinTech,2026-08-12
+Can we get an option to customize the colors of themes in the reports?,sales_note,Horizon FinTech,2026-08-13
+The database sync failed with a 504 gateway timeout during peak usage.,support_ticket,Logistics Pro,2026-08-13
+Love the new dark mode design! It is very easy on the eyes.,community_post,Designify Studio,2026-08-14
+The Slack integration fails to send notifications when new feedback is ingested.,app_review,Nexus Interactive,2026-08-14
+We need a way to filter feedback by custom date ranges on the main trends chart.,sales_note,Vanguard Media,2026-08-15
+Simple to configure and extremely snappy performance.,nps_survey,TechCorp Solutions,2026-08-15
+Is there an API endpoint where we can pull classified theme metrics programmatically?,community_post,CloudScale Inc,2026-08-15

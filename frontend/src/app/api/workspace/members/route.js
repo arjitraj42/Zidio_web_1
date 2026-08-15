@@ -60,6 +60,9 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
+    if (body && body.password === '') {
+      delete body.password;
+    }
     const parsed = createMemberSchema.safeParse(body);
 
     if (!parsed.success) {

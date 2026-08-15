@@ -89,7 +89,7 @@ export function FilterBar({
   const selectedTheme = availableThemes.find((t) => t.id === selectedThemeId);
 
   return (
-    <div ref={containerRef} className="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-sm">
+    <div ref={containerRef} className="relative z-20 bg-gray-900/90 border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-800/80">
         <div className="flex items-center space-x-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
           <Filter className="h-4 w-4 text-indigo-400" />
@@ -108,9 +108,9 @@ export function FilterBar({
       </div>
 
       {/* Filter Options Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 pt-3">
         {/* Channel Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Channel</label>
           <button
             type="button"
@@ -153,7 +153,7 @@ export function FilterBar({
         </div>
 
         {/* Sentiment Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Sentiment</label>
           <button
             type="button"
@@ -200,7 +200,7 @@ export function FilterBar({
         </div>
 
         {/* Status Multi-Select Dropdown */}
-        <div className="relative">
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Status</label>
           <button
             type="button"
@@ -245,44 +245,80 @@ export function FilterBar({
         </div>
 
         {/* Theme Single-Select Dropdown */}
-        <div>
+        <div className="relative sm:col-span-1 lg:col-span-2">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Theme</label>
-          <select
-            value={selectedThemeId}
-            onChange={(e) => onFilterChange('themeId', e.target.value)}
-            className={`w-full text-xs px-3 py-2 rounded-xl border transition-all outline-none ${
+          <button
+            type="button"
+            onClick={() => setOpenDropdown(openDropdown === 'theme' ? null : 'theme')}
+            className={`w-full flex items-center justify-between text-xs px-3 py-2 rounded-xl border transition-all ${
               selectedThemeId
                 ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 font-medium'
-                : 'bg-gray-950/60 border-gray-800 text-gray-300 focus:border-indigo-500/50'
+                : 'bg-gray-950/60 border-gray-800 text-gray-300 hover:border-gray-700'
             }`}
           >
-            <option value="" className="bg-gray-900 text-gray-300">
-              All Themes
-            </option>
-            {availableThemes.map((theme) => (
-              <option key={theme.id} value={theme.id} className="bg-gray-900 text-gray-300">
-                {theme.name}
-              </option>
-            ))}
-          </select>
+            <span className="truncate">
+              {(() => {
+                const matchedTheme = availableThemes.find((t) => t.id === selectedThemeId);
+                return matchedTheme ? matchedTheme.name : 'All Themes';
+              })()}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 ml-2 text-gray-400" />
+          </button>
+
+          {openDropdown === 'theme' && (
+            <div className="absolute z-50 mt-1.5 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl p-2 space-y-1 text-xs max-h-60 overflow-y-auto custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => {
+                  onFilterChange('themeId', '');
+                  setOpenDropdown(null);
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-gray-800 text-left text-gray-300 transition-colors"
+              >
+                <span>All Themes</span>
+                {!selectedThemeId && <Check className="h-3.5 w-3.5 text-indigo-400" />}
+              </button>
+              {availableThemes.map((theme) => {
+                const isSelected = selectedThemeId === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => {
+                      onFilterChange('themeId', theme.id);
+                      setOpenDropdown(null);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-gray-800 text-left text-gray-300 transition-colors"
+                  >
+                    <span>{theme.name}</span>
+                    {isSelected && <Check className="h-3.5 w-3.5 text-indigo-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Date Range Picker (From - To) */}
-        <div>
+        <div className="sm:col-span-2 lg:col-span-4">
           <label className="block text-[11px] font-medium text-gray-400 mb-1">Date Range</label>
           <div className="grid grid-cols-2 gap-1.5">
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => onFilterChange('dateFrom', e.target.value)}
-              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-[11px] px-2 py-1.5 rounded-xl focus:border-indigo-500/50 outline-none"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              onFocus={(e) => e.currentTarget.showPicker?.()}
+              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-xs px-3 py-2 rounded-xl focus:border-indigo-500/50 outline-none w-full cursor-pointer"
               title="From Date"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => onFilterChange('dateTo', e.target.value)}
-              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-[11px] px-2 py-1.5 rounded-xl focus:border-indigo-500/50 outline-none"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              onFocus={(e) => e.currentTarget.showPicker?.()}
+              className="bg-gray-950/60 border border-gray-800 text-gray-300 text-xs px-3 py-2 rounded-xl focus:border-indigo-500/50 outline-none w-full cursor-pointer"
               title="To Date"
             />
           </div>

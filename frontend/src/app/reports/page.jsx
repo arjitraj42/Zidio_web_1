@@ -178,7 +178,7 @@ function ReportsContent() {
     if (status === 'authenticated' && selectedReportId) {
       fetchReportDetail(selectedReportId);
     }
-  }, [status, selectedThemeId, selectedReportId, fetchReportDetail]);
+  }, [status, selectedReportId, fetchReportDetail]);
 
   // Handle selecting a report
   const handleSelectReport = (id) => {

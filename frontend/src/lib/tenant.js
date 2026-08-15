@@ -51,6 +51,7 @@ export function tenantDb(workspaceId) {
         ...args,
         data: (args.data || []).map((item) => ({ ...item, workspaceId })),
       }),
+      update: (args = {}) => db.feedback.update({ ...args, where: scopedWhere(workspaceId, args.where) }),
       deleteMany: (args = {}) => db.feedback.deleteMany({ ...args, where: scopedWhere(workspaceId, args.where) }),
     },
     theme: {

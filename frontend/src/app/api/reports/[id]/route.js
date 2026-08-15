@@ -15,7 +15,7 @@ export async function GET(req, { params }) {
   if (rbacError) return rbacError;
 
   try {
-    const { id: reportId } = params;
+    const { id: reportId } = await params;
     const workspaceId = user.workspaceId;
 
     // Verify report exists AND belongs to caller's workspace (don't leak existence across tenants)

@@ -296,6 +296,47 @@ function InboxContent() {
     }
   };
 
+  // Handle Optimistic Inline Sentiment Change
+  const handleSentimentChange = async (feedbackId, newSentiment) => {
+    if (!canCreate) return;
+
+    const previousList = [...feedbackList];
+
+    // Optimistic UI Update
+    setFeedbackList((prev) =>
+      prev.map((item) =>
+        item.id === feedbackId
+          ? {
+              ...item,
+              sentiment: newSentiment === 'UNCLASSIFIED' ? null : newSentiment,
+              sentimentScore: newSentiment === 'POS' ? 0.85 : newSentiment === 'NEG' ? -0.75 : 0.0,
+            }
+          : item
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/feedback/${feedbackId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sentiment: newSentiment === 'UNCLASSIFIED' ? null : newSentiment,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFeedbackList(previousList);
+        setError(data.error || 'Failed to update sentiment');
+      }
+    } catch (err) {
+      console.error(err);
+      setFeedbackList(previousList);
+      setError('Network error while updating feedback sentiment.');
+    }
+  };
+
   // Handle Manual AI Re-classification
   const handleReclassify = async (feedbackId) => {
     if (!canCreate || reclassifyingId) return;
@@ -1007,7 +1048,26 @@ function InboxContent() {
                                 </span>
                               )}
 
-                              {item.sentiment ? (
+                              {canCreate ? (
+                                <select
+                                  value={item.sentiment || 'UNCLASSIFIED'}
+                                  onChange={(e) => handleSentimentChange(item.id, e.target.value)}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border cursor-pointer bg-gray-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                                    item.sentiment === 'POS'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                      : item.sentiment === 'NEU'
+                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                      : item.sentiment === 'NEG'
+                                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                      : 'bg-gray-800 text-amber-400/90 border border-amber-500/20'
+                                  }`}
+                                >
+                                  <option value="POS" className="bg-gray-900 text-emerald-400">Positive</option>
+                                  <option value="NEU" className="bg-gray-900 text-amber-400">Neutral</option>
+                                  <option value="NEG" className="bg-gray-900 text-rose-400">Negative</option>
+                                  <option value="UNCLASSIFIED" className="bg-gray-900 text-gray-400">Unclassified</option>
+                                </select>
+                              ) : item.sentiment ? (
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                     item.sentiment === 'POS'

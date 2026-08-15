@@ -24,6 +24,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Users,
+  UserPlus,
   Inbox,
   ArrowRight,
   RefreshCw,
@@ -67,6 +68,7 @@ function DashboardContent() {
   const initialChannel = searchParams.get('channel') || '';
   const initialSentiment = searchParams.get('sentiment') || '';
   const initialStatus = searchParams.get('status') || '';
+  const initialThemeId = searchParams.get('themeId') || '';
   const initialDateFrom = searchParams.get('dateFrom') || '';
   const initialDateTo = searchParams.get('dateTo') || '';
 
@@ -74,6 +76,7 @@ function DashboardContent() {
     channel: initialChannel,
     sentiment: initialSentiment,
     status: initialStatus,
+    themeId: initialThemeId,
     dateFrom: initialDateFrom,
     dateTo: initialDateTo,
   });
@@ -110,6 +113,7 @@ function DashboardContent() {
       if (newFilters.channel) params.set('channel', newFilters.channel);
       if (newFilters.sentiment) params.set('sentiment', newFilters.sentiment);
       if (newFilters.status) params.set('status', newFilters.status);
+      if (newFilters.themeId) params.set('themeId', newFilters.themeId);
       if (newFilters.dateFrom) params.set('dateFrom', newFilters.dateFrom);
       if (newFilters.dateTo) params.set('dateTo', newFilters.dateTo);
 
@@ -147,6 +151,7 @@ function DashboardContent() {
       if (filters.channel) queryParams.set('channel', filters.channel);
       if (filters.sentiment) queryParams.set('sentiment', filters.sentiment);
       if (filters.status) queryParams.set('status', filters.status);
+      if (filters.themeId) queryParams.set('themeId', filters.themeId);
       if (filters.dateFrom) queryParams.set('dateFrom', filters.dateFrom);
       if (filters.dateTo) queryParams.set('dateTo', filters.dateTo);
 
@@ -198,6 +203,7 @@ function DashboardContent() {
       channel: '',
       sentiment: '',
       status: '',
+      themeId: '',
       dateFrom: '',
       dateTo: '',
     };
@@ -273,8 +279,8 @@ function DashboardContent() {
                 href="/settings/members"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 font-semibold text-xs border border-cyan-500/30 transition-all hover:scale-[1.02]"
               >
-                <Users className="h-3.5 w-3.5" />
-                <span>Members</span>
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Add Member</span>
               </Link>
 
               <Link
