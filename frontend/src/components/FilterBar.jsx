@@ -89,7 +89,7 @@ export function FilterBar({
   const selectedTheme = availableThemes.find((t) => t.id === selectedThemeId);
 
   return (
-    <div ref={containerRef} className="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-sm">
+    <div ref={containerRef} className="relative z-20 bg-gray-900/90 border border-gray-800 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-800/80">
         <div className="flex items-center space-x-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
           <Filter className="h-4 w-4 text-indigo-400" />
