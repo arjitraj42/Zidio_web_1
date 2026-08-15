@@ -208,7 +208,7 @@ export default function MembersPage() {
               <span>Add New Workspace Member</span>
             </h2>
 
-            <form onSubmit={handleAddMember} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form onSubmit={handleAddMember} className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <input
                   type="text"
@@ -227,6 +227,16 @@ export default function MembersPage() {
                   placeholder="email@acme.com"
                   value={newMember.email}
                   onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-950/60 border border-gray-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white text-sm"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="password"
+                  placeholder="Password (Default: demo1234)"
+                  value={newMember.password}
+                  onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-950/60 border border-gray-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white text-sm"
                 />
               </div>
