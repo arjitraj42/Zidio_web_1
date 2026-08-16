@@ -62,6 +62,31 @@ Project LOOP follows a clean 3-tier multi-tenant architecture with strict worksp
 
 ---
 
+## 🚀 Recent Enhancements & Platform Updates
+
+The platform has been upgraded with the following enhancements:
+
+### 1. WebGL Plasma Wave Background
+* **HomePage Backdrop**: Integrated the `<PlasmaWave />` component from React Bits as a smooth, responsive, fixed background.
+* **Compatibility**: Engineered with window checks and client-only logic to prevent Next.js Server-Side Rendering (SSR) build-time exceptions.
+
+### 2. Dashboard Clean Light Theme
+* **Theme Migration**: Migrated the dashboard page and filter panels from dark mode to a premium, clean slate-and-white theme (`bg-slate-50`, slate-800 text).
+* **Data Visualization**: Re-engineered chart axes, grid-lines, tooltips, and legends to match the light theme design guidelines, including standard pastel colors for sentiment slices:
+  * **Emerald Green** for Positive
+  * **Amber Yellow** for Neutral
+  * **Rose Red** for Negative
+
+### 3. Gemini API Availability Fallback
+* **Rate-Limit & Demand Resiliency**: Upgraded `callGeminiAPI` in all endpoints (RAG Q&A, feedback classification, and narrative report generation) to run a fallback cycle.
+* **Logic**: First attempts querying the advanced **Gemini 3.7 Flash** model. If the API returns a `503 Service Unavailable` or spike overload, it automatically switches to the highly available, low-latency **Gemini 3.5 Flash-Lite** model to ensure zero service disruption.
+
+### 4. Usability & Bug Fixes
+* **FilterBar Syntax Fix**: Fixed a compilation error caused by invalid JSX brackets in the conditional render of the selected theme tag.
+* **Browser Picker Crash**: Fixed a Brave/Chrome browser crash (`NotAllowedError: showPicker requires user gesture`) inside date filter inputs. Removed `onFocus` picker invocation and wrapped `onClick` triggers in `try-catch` blocks for robust failure safety.
+
+---
+
 ## 🔑 Demo Credentials
 
 A pre-populated demo workspace (**Acme AI Intelligence Workspace**) is provided with 120+ seeded feedback items, topic clusters, and vector embeddings.
