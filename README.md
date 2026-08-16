@@ -127,8 +127,7 @@ NEXTAUTH_SECRET="your-super-secret-nextauth-key-32-chars"
 NEXTAUTH_URL="http://localhost:3000"
 
 # AI Integrations
-ANTHROPIC_API_KEY="sk-ant-api03-your-anthropic-api-key"
-OPENAI_API_KEY="sk-proj-your-openai-api-key" # Optional (for embeddings)
+GEMNI_API_KEY= "example_API_KEY"
 ```
 
 ### Step 3: Run Database Migrations & Seed Script
