@@ -38,28 +38,41 @@ async function callGeminiAPI(systemPrompt, userPrompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
+  const models = ['gemini-3.7-flash', 'gemini-3.5-flash-lite'];
+  let lastError = null;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
-        },
-      ],
-    }),
-  });
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API Error (${response.status}): ${errorText}`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API Error (${response.status}): ${errorText}`);
+      }
+
+      const json = await response.json();
+      return json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } catch (error) {
+      console.warn(`Failed call to Gemini model ${model}. Error: ${error.message}. Trying fallback if available...`);
+      lastError = error;
+    }
   }
 
-  const json = await response.json();
-  return json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  throw lastError || new Error('All Gemini API models failed');
 }
+
 
 /**
  * Generates an executive Voice-of-Customer report narrative using AI grounded strictly in pre-computed stats.
