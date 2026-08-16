@@ -18,14 +18,31 @@ import {
   Database,
   ExternalLink,
 } from 'lucide-react';
+import PlasmaWave from '@/components/PlasmaWave';
+
+
 
 export default function HomePage() {
   return (
     <div className="relative min-h-screen bg-gray-950 text-gray-100 font-sans antialiased selection:bg-indigo-500 selection:text-white flex flex-col justify-between overflow-hidden">
+      {/* PlasmaWave Ambient Background */}
+      <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
+        <PlasmaWave
+          colors={["#6366F1", "#06B6D4"]}
+          speed1={0.02}
+          speed2={0.02}
+          focalLength={0.8}
+          bend1={1}
+          bend2={0.5}
+          dir2={1.0}
+          rotationDeg={15}
+        />
+      </div>
+
       {/* Dynamic Ambient Background Glows */}
-      <div className="ambient-glow w-[600px] h-[600px] bg-indigo-600/20 top-[-150px] left-[-150px]" />
-      <div className="ambient-glow w-[500px] h-[500px] bg-purple-600/20 bottom-[-100px] right-[-100px]" />
-      <div className="ambient-glow w-[400px] h-[400px] bg-pink-600/15 top-[30%] right-[10%]" />
+      <div className="ambient-glow w-[600px] h-[600px] bg-indigo-600/20 top-[-150px] left-[-150px] pointer-events-none" />
+      <div className="ambient-glow w-[500px] h-[500px] bg-purple-600/20 bottom-[-100px] right-[-100px] pointer-events-none" />
+      <div className="ambient-glow w-[400px] h-[400px] bg-pink-600/15 top-[30%] right-[10%] pointer-events-none" />
 
       {/* Top Glassmorphism Navigation Bar */}
       <header className="relative z-50 border-b border-gray-800/80 bg-gray-950/80 backdrop-blur-xl px-6 py-4">
